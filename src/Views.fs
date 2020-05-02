@@ -1,9 +1,12 @@
 module Study.Elmish.Views
 
+open ParserCombinators
+open Engine
 open Fable.React
 open Fable.React.Props
 open Fable.Core.JsInterop
 open Fulma
+open Study.Elmish
 
 let renderCellEdit position dispatch value =
   td [ Class "selected"] [
@@ -20,13 +23,25 @@ let renderCellView position dispatch value =
     OnClick (fun _ -> dispatch (StartEdit position))
   ] [str value]
 
+
 let renderCell spreadSheet position dispatch =
-  let render = if spreadSheet.Active = Some position then
-                  renderCellEdit position dispatch
-                 else
-                  renderCellView position dispatch
-  let value = spreadSheet.Cells.TryFind position
-  render (defaultArg value "")
+  let cell = spreadSheet.Cells.TryFind position
+  if spreadSheet.Active = Some position then
+    renderCellEdit position dispatch (defaultArg cell "")
+  else
+    let content =
+      match cell with
+      | None -> Ok ""
+      | Some value ->
+        match (run expr value) with
+        | Error e -> Error e
+        | Ok (exp,_) ->
+          match (evaluate spreadSheet exp) with
+          | Ok v -> Ok (string v)
+          | Error e -> Error e
+    match content with
+    | Error e -> renderCellView position dispatch (sprintf "%s: %s" "#ERR" e)
+    | Ok c -> renderCellView position dispatch c
   
 let renderView state dispatch =
   Container.container [] [

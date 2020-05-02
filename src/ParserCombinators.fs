@@ -107,9 +107,6 @@ let pString stringToMatch =
   let listToString chars =
     String (List.toArray chars)
   stringToMatch |> Seq.map pChar |> Seq.toList |> pSequence |> map listToString 
-
-let pOperator =
-  pChar '+' <|> pChar '\\' <|> pChar '-' <|> pChar '*' <|> pChar '/' 
   
 let anyOf chars =
   chars |> List.map pChar |> List.reduce orElse

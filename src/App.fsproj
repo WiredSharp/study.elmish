@@ -12,6 +12,7 @@
     <Compile Include="Views.fs" />
     <Compile Include="App.fs" />
     <Content Include="paket.references" />
+    <None Include="sandbox.fsx" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

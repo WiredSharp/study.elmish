@@ -15,3 +15,4 @@ type Event =
 type Expr =
   | Number of int
   | Binary of Expr * char * Expr
+  | Reference of Position
