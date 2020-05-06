@@ -33,7 +33,12 @@ let (<|>) = orElse
 
 let choice parserList =
   List.reduce (<|>) parserList
-      
+
+let pReturn x =
+  let innerFn input =
+    Ok (x, input)
+  Parser innerFn
+  
 let map f parser =
   let mappedParser input =
     match (run parser input) with
@@ -45,10 +50,11 @@ let (<!>) = map
 
 let (|>>) x f = map f x
 
-let pReturn x =
-  let innerFn input =
-    Ok (x, input)
-  Parser innerFn
+let (.>>) p1 p2 =
+  map (fun (e1,e2) -> e1) (p1 .>>. p2)
+
+let (>>.) p1 p2 =
+  map (fun (e1,e2) -> e2) (p1 .>>. p2)
   
 let apply pFn parser =
   (pFn .>>. parser) |> map (fun (f,x) -> f x)
@@ -101,9 +107,8 @@ let pChar expectedChar =
         Error (sprintf "expected %c but got %c" expectedChar input.[0])
   Parser pFn
 
-
 // match a specific string
-let pString stringToMatch =
+let paString stringToMatch =
   let listToString chars =
     String (List.toArray chars)
   stringToMatch |> Seq.map pChar |> Seq.toList |> pSequence |> map listToString 
@@ -133,3 +138,16 @@ let pInteger =
     | Some _ -> - absoluteValue
     | None -> absoluteValue
   opt (pChar '-') .>>. atLeastOne pDigit |> map listToInt
+
+let between wrapper parser = wrapper >>. parser .>> wrapper
+
+let between2 wrapper1 wrapper2 parser = wrapper1 >>. parser .>> wrapper2 
+
+let manySpaces = many (anyOf [' '; '\t'])
+
+let quoted (_:Parser<'a>) = between (pChar '\'')
+
+let doubleQuoted (_:Parser<'a>) = between (pChar '"')
+
+let separatedBy parser separator =
+  many (parser .>> separator)

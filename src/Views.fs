@@ -32,13 +32,7 @@ let renderCell spreadSheet position dispatch =
     let content =
       match cell with
       | None -> Ok ""
-      | Some value ->
-        match (run expr value) with
-        | Error e -> Error e
-        | Ok (exp,_) ->
-          match (evaluate spreadSheet exp) with
-          | Ok v -> Ok (string v)
-          | Error e -> Error e
+      | Some value -> pEvaluate spreadSheet value
     match content with
     | Error e -> renderCellView position dispatch (sprintf "%s: %s" "#ERR" e)
     | Ok c -> renderCellView position dispatch c

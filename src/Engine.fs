@@ -23,11 +23,13 @@ let operator =
 
 let number = pInteger |>> Number
 
-let binary = number .>>. operator .>>. number |>> (fun ((l,op), r) -> Binary (l,op,r))
-
 let reference = anyOf ['A'..'Z'] .>>. pDigit |>> fun (col,row) -> Reference (col, row)
 
+let binary = (number <|> reference) .>>. operator .>>. (number <|> reference) |>> (fun ((l,op), r) -> Binary (l,op,r))
+
 let expr = binary <|> number <|> reference
+
+let cellValue = (pChar '=' >>. expr) <|> number
 
 let rec evaluate state = function
   | Number n -> Ok n
@@ -44,11 +46,11 @@ let rec evaluate state = function
       match (state.Cells.TryFind r) with
       | None -> Error "#NA"
       | Some v ->
-          match run expr v with
+          match run cellValue v with
           | Ok (exp,_) -> evaluate state exp
           | Error e -> Error e
           
 let pEvaluate state value =
-  match (run expr value) with
-  | Ok (exp,_) -> evaluate state exp
+  match (run cellValue value) with
+  | Ok (exp,_) -> Result.bind (fun x -> Ok (string x)) (evaluate state exp)
   | Error e -> Error e
