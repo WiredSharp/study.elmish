@@ -21,15 +21,21 @@ let update evt state =
 let operator =
   pChar '+' <|> pChar '\\' <|> pChar '-' <|> pChar '*' <|> pChar '/' 
 
-let number = pInteger |>> Number
+let number = pInteger |>> Number <?> "number"
 
-let reference = anyOf ['A'..'Z'] .>>. pDigit |>> fun (col,row) -> Reference (col, row)
+let reference = anyOf ['A'..'Z'] .>>. pDigit |>> (fun (col,row) -> Reference (col, row)) <?> "reference"
 
-let binary = (number <|> reference) .>>. operator .>>. (number <|> reference) |>> (fun ((l,op), r) -> Binary (l,op,r))
+let mutable term = number <|> reference <?> "term"
 
-let expr = binary <|> number <|> reference
+let brack p = between2 (pChar '(') (pChar ')') p
 
-let cellValue = (pChar '=' >>. expr) <|> number
+let binary = term .>>. operator .>>. term |>>  (fun ((l,op), r) -> Binary (l,op,r))  <?> "operation"
+
+term <- binary <|> number <|> reference <?> "term"
+
+//let binary = (number <|> reference) .>>. operator .>>. (number <|> reference) |>> (fun ((l,op), r) -> Binary (l,op,r))  <?> "operation"
+
+let cellValue = (pChar '=' >>. term) <|> number <?> "value"
 
 let rec evaluate state = function
   | Number n -> Ok n
@@ -46,11 +52,11 @@ let rec evaluate state = function
       match (state.Cells.TryFind r) with
       | None -> Error "#NA"
       | Some v ->
-          match run cellValue v with
+          match parseWith cellValue v with
           | Ok (exp,_) -> evaluate state exp
-          | Error e -> Error e
+          | Error (e) -> Error (result (Error e))
           
 let pEvaluate state value =
-  match (run cellValue value) with
+  match (parseWith cellValue value) with
   | Ok (exp,_) -> Result.bind (fun x -> Ok (string x)) (evaluate state exp)
-  | Error e -> Error e
+  | Error e -> Error (result (Error e))
